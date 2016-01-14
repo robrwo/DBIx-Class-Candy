@@ -2,6 +2,10 @@ package A::Schema::Result::Album;
 
 use DBIx::Class::Candy -base => 'A::Schema::Result';
 
+use Types::SQL -types;
+use Types::Standard -types;
+
+
 table 'albums';
 
 primary_column id => {
@@ -10,11 +14,7 @@ primary_column id => {
    is_numeric => 1,
 };
 
-has_column name => (
-   data_type => 'varchar',
-   size => 25,
-   is_nullable => 1,
-);
+has_column name => Maybe[Varchar[25]];
 
 column artist_id => {
    data_type => 'int',
@@ -30,4 +30,3 @@ sub test_strict {
 }
 
 1;
-

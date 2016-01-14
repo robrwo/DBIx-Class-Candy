@@ -16,6 +16,15 @@ is( $result_class->table, 'albums', 'table set correctly' );
 my @cols = $result_class->columns;
 is( $cols[0], 'id', 'id column set correctly' );
 is( $cols[1], 'name', 'name column set correctly' );
+
+{
+  my $info = $result_class->column_info('name');
+
+  is( $info->{data_type}, 'varchar', 'name is varchar');
+  is( $info->{size}, 25, 'name size is set correctly');
+  ok( $info->{is_nullable}, 'name is nullable' );
+}
+
 A::Schema::Result::Album::test_strict;
 
 ok( !$result_class->can('column'), 'namespace gets cleaned');

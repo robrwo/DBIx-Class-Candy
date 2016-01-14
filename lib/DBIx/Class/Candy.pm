@@ -8,6 +8,8 @@ require DBIx::Class::Candy::Exports;
 use MRO::Compat;
 use Sub::Exporter 'build_exporter';
 use Carp 'croak';
+use Types::SQL::Util 'column_info_from_type';
+use Scalar::Util 'blessed';
 
 # ABSTRACT: Sugar for your favorite ORM, DBIx::Class
 
@@ -187,15 +189,42 @@ sub parse_arguments {
   };
 }
 
+sub _munge_column_info {
+  my @args = @_;
+
+  return unless @args;
+
+  my %info;
+
+  if (@args == 1) {
+    my $arg = $args[0];
+
+    if ((blessed $arg) && ($arg->isa('Type::Tiny'))) {
+      %info = ( isa => $arg );
+    }
+    elsif (ref($arg) eq 'HASH') {
+      %info = %$arg;
+    }
+  }
+
+  if (my $type = $info{isa}) {
+     %info = ( column_info_from_type($type), %info );
+  }
+
+  return \%info;
+}
+
+
 sub gen_primary_column {
   my ($self, $inheritor, $set_table) = @_;
   sub {
     my $i = $inheritor;
+    my $m = \&_munge_column_info;
     sub {
       my $column = shift;
       my $info   = shift;
       $set_table->();
-      $i->add_columns($column => $info);
+      $i->add_columns($column => $m->($info));
       $i->set_primary_key($i->primary_columns, $column);
     }
   }
@@ -205,11 +234,12 @@ sub gen_unique_column {
   my ($self, $inheritor, $set_table) = @_;
   sub {
     my $i = $inheritor;
+    my $m = \&_munge_column_info;
     sub {
       my $column = shift;
       my $info   = shift;
       $set_table->();
-      $i->add_columns($column => $info);
+      $i->add_columns($column => $m->($info));
       $i->add_unique_constraint([ $column ]);
     }
   }
@@ -219,10 +249,11 @@ sub gen_has_column {
   my ($self, $inheritor, $set_table) = @_;
   sub {
     my $i = $inheritor;
+    my $m = \&_munge_column_info;
     sub {
       my $column = shift;
       $set_table->();
-      $i->add_columns($column => { @_ })
+      $i->add_columns($column => $m->(@_))
     }
   }
 }
